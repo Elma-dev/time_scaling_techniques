@@ -1,13 +1,26 @@
 import logging
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import load_dataset
+import os
+
 import torch
-from math_answer_extractor import (
-    normalize_text,
-    split_into_parts,
-    answer_verifier,
-    extract_final_answer,
-)
+from datasets import load_dataset
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+os.environ.setdefault("WANDB_DISABLED", "true")
+
+try:
+    from math_answer_extractor import (
+        answer_verifier,
+        extract_final_answer,
+        normalize_text,
+        split_into_parts,
+    )
+except ModuleNotFoundError:
+    from time_scaling_techniques.math_answer_extractor import (
+        answer_verifier,
+        extract_final_answer,
+        normalize_text,
+        split_into_parts,
+    )
 from transformers import (
     TrainerCallback,
     TrainingArguments,
@@ -35,12 +48,21 @@ def grad_function(prediction, gtruth):
 
 
 def correctness_reward(
-    completions: list[str], ground_truth: list[str], **kargs
+    completions: list[str],
+    answer: list[str] | None = None,
+    ground_truth: list[str] | None = None,
+    **kwargs,
 ) -> list[float]:
+    truths = answer if answer is not None else ground_truth
+    if truths is None:
+        raise ValueError(
+            "correctness_reward expected an `answer` or `ground_truth` field in the batch."
+        )
+
     rewards = []
-    for completion, answer in zip(completions, ground_truth):
+    for completion, truth in zip(completions, truths):
         completion = extract_final_answer(completion)
-        grad = grad_function(completion, answer)
+        grad = grad_function(completion, truth)
         rewards.append(float(grad))
     return rewards
 
@@ -112,7 +134,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     logger.info("Load Dataset...")
     dataset_id = "HuggingFaceH4/MATH-500"
-    dataset = load_dataset(dataset_id, split="test")
+    dataset = load_dataset(dataset_id, split="test[:100]")
     # format dataset
     logger.info("Format Dataset...")
     dataset = dataset.map(
@@ -137,17 +159,18 @@ if __name__ == "__main__":
         beta=0,  # no KL
         epsilon=10,
         learning_rate=1e-6,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=1,
         gradient_accumulation_steps=4,
         steps_per_generation=2,
         use_vllm=True,  # use vllm as engine for rollout generation
         vllm_mode="colocate",
-        vllm_gpu_memory_utilization=0.45,
+        vllm_gpu_memory_utilization=0.4,
         vllm_importance_sampling_correction=True,
         bf16=True,
-        eval_steps=50,
-        logging_steps=50,
+        eval_steps=25,
+        logging_steps=10,
         report_to="trackio",
+        run_name="grpo_qwen3-0.6b_lr1e-6_beta0",
     )
     logger.info("Prepare Trainer...")
     trainer = GRPOTrainer(

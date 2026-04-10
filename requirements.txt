@@ -1,3 +1,5 @@
-trl[vllm]
+datasets
+accelerate
 trackio
 transformers
+trl[vllm]
