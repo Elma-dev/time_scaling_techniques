@@ -26,7 +26,7 @@ The chart below summarises accuracy (%) and wall-clock generation time (s) acros
 ![Accuracy vs. Time across techniques](image.png)
 
 **Key takeaways:**
-- **Self-Consistency + CoT** achieves the best accuracy (94%) but stays reasonably fast (~94 s).
+- **Self-Consistency + CoT** achieves the best accuracy (70%) but stays reasonably fast (~94 s).
 - **Self-Refinement + CoT** is the slowest (706 s) with 60% accuracy — iterative refinement is expensive and doesn't always win.
 - **CoT alone** gives a solid boost over the base model with minimal overhead.
 
