@@ -7,20 +7,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 os.environ.setdefault("WANDB_DISABLED", "true")
 
-try:
-    from math_answer_extractor import (
-        answer_verifier,
-        extract_final_answer,
-        normalize_text,
-        split_into_parts,
-    )
-except ModuleNotFoundError:
-    from time_scaling_techniques.math_answer_extractor import (
-        answer_verifier,
-        extract_final_answer,
-        normalize_text,
-        split_into_parts,
-    )
+from ..math_answer_extractor import (
+    answer_verifier,
+    extract_final_answer,
+    normalize_text,
+    split_into_parts,
+)
 from transformers import (
     TrainerCallback,
     TrainingArguments,
